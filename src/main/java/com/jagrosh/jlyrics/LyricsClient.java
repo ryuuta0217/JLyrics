@@ -103,7 +103,16 @@ public class LyricsClient
      */
     public CompletableFuture<Lyrics> getLyrics(String search)
     {
-        return getLyrics(search, defaultSource);
+        return getLyrics(search, defaultSource, true);
+    }
+
+    public CompletableFuture<Lyrics> getLyrics(String search, boolean removeNewLines)
+    {
+        return getLyrics(search, defaultSource, removeNewLines);
+    }
+
+    public CompletableFuture<Lyrics> getLyrics(String search, String source) {
+        return getLyrics(search, source, true);
     }
     
     /**
@@ -115,7 +124,7 @@ public class LyricsClient
      * @param source the source to use (must be defined in config)
      * @return a {@link CompletableFuture} to access the lyrics. The Lyrics object may be null if no lyrics were found.
      */
-    public CompletableFuture<Lyrics> getLyrics(String search, String source)
+    public CompletableFuture<Lyrics> getLyrics(String search, String source, boolean removeNewLines)
     {
         String cacheKey = source + "||" + search;
         if(cache.containsKey(cacheKey))
@@ -125,9 +134,11 @@ public class LyricsClient
             String searchUrl = String.format(config.getString("lyrics." + source + ".search.url"), search);
             boolean jsonSearch = config.getBoolean("lyrics." + source + ".search.json");
             String select = config.getString("lyrics." + source + ".search.select");
+            String artworkSelector = config.getString("lyrics." + source + ".parse.artwork");
             String titleSelector = config.getString("lyrics." + source + ".parse.title");
             String authorSelector = config.getString("lyrics." + source + ".parse.author");
             String contentSelector = config.getString("lyrics." + source + ".parse.content");
+            String altContentSelector = config.getString("lyrics.MusicMatch.parse.contentW");
             return CompletableFuture.supplyAsync(() -> 
             {
                 try
@@ -152,11 +163,15 @@ public class LyricsClient
                     if(url==null || url.isEmpty())
                         return null;
                     doc = Jsoup.connect(url).userAgent(userAgent).timeout(timeout).get();
-                    Lyrics lyrics = new Lyrics(doc.selectFirst(titleSelector).ownText(), 
-                            doc.selectFirst(authorSelector).ownText(), 
-                            cleanWithNewlines(doc.selectFirst(contentSelector)),
-                            url,
-                            source);
+
+                    String artwork = !artworkSelector.isEmpty() ? doc.selectFirst(artworkSelector).selectFirst("img").attributes().get("src") : "";
+                    String title = doc.selectFirst(titleSelector).ownText();
+                    String author = doc.selectFirst(authorSelector).ownText();
+                    Element content = doc.selectFirst(contentSelector) != null ? doc.selectFirst(contentSelector) : (source.equals("MusicMatch") ? doc.selectFirst(altContentSelector) : null);
+
+                    Lyrics lyrics = new Lyrics(artwork, title, author,
+                            removeNewLines ? cleanWithNewlines(content) : content.ownText(),
+                            url, source);
                     cache.put(cacheKey, lyrics);
                     return lyrics;
                 }

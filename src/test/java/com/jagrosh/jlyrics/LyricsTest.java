@@ -95,6 +95,7 @@ public class LyricsTest
         
         Lyrics lyrics = client.getLyrics("ellie goulding lights").get();
         assertNotNull(lyrics);
+        assertNotNull(lyrics.getArtwork());
         assertNotNull(lyrics.getTitle());
         assertNotNull(lyrics.getAuthor());
         assertNotNull(lyrics.getContent());
@@ -104,6 +105,13 @@ public class LyricsTest
         assertNull(lyrics);
         
         lyrics = client.getLyrics("smooth criminal").get();
+        assertNotNull(lyrics);
+        assertNotNull(lyrics.getTitle());
+        assertNotNull(lyrics.getAuthor());
+        assertNotNull(lyrics.getContent());
+        assertNotNull(lyrics.getSource());
+
+        lyrics = client.getLyrics("the nights avicii", false).get();
         assertNotNull(lyrics);
         assertNotNull(lyrics.getTitle());
         assertNotNull(lyrics.getAuthor());
